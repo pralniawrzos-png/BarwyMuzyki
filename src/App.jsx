@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Music, 
   Guitar, 
@@ -10,9 +10,258 @@ import {
   Menu, 
   X, 
   ChevronRight,
+  ChevronLeft,
   Smile,
-  Users
+  Users,
+  Info,
+  ShieldCheck,
+  Calendar,
+  Mic2,
+  Puzzle,
+  Facebook,
+  Play,
+  Square
 } from 'lucide-react';
+
+// --- Komponenty Prawne (Modale i Cookies) ---
+
+const CookieBanner = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem('cookieConsent');
+    if (!consent) setIsVisible(true);
+  }, []);
+
+  const acceptCookies = () => {
+    localStorage.setItem('cookieConsent', 'true');
+    setIsVisible(false);
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-gray-800 text-gray-300 p-4 z-[100] shadow-2xl animate-fade-in-up">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-start gap-3 text-sm">
+          <Info className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5" />
+          <p>Ta strona korzysta z ciasteczek (cookies), aby świadczyć usługi na najwyższym poziomie. Dalsze korzystanie ze strony oznacza, że zgadzasz się na ich użycie zgodnie z naszą Polityką Prywatności.</p>
+        </div>
+        <button onClick={acceptCookies} className="whitespace-nowrap bg-violet-600 hover:bg-violet-500 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+          Rozumiem
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const LegalModal = ({ isOpen, onClose, title, children }) => {
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col relative z-10 animate-fade-in-up">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-violet-600" />{title}</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+        </div>
+        <div className="p-6 overflow-y-auto flex-1 text-gray-600 space-y-4">
+          {children}
+        </div>
+        <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end">
+          <button onClick={onClose} className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-xl font-medium transition-colors">Zamknij</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- INTERAKTYWNY SYMULATOR PIANINA ---
+
+// Częstotliwości dźwięków (2.5 oktawy G3 - C6)
+const noteFrequencies = {
+  'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'B3': 246.94,
+  'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+  'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99, 'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77,
+  'C6': 1046.50
+};
+
+// Definicja klawiszy białych i przylegających do nich czarnych
+const whiteKeys = [
+  { note: 'G3', hasBlack: true, blackNote: 'G#3' }, { note: 'A3', hasBlack: true, blackNote: 'A#3' }, { note: 'B3', hasBlack: false },
+  { note: 'C4', hasBlack: true, blackNote: 'C#4' }, { note: 'D4', hasBlack: true, blackNote: 'D#4' }, { note: 'E4', hasBlack: false }, { note: 'F4', hasBlack: true, blackNote: 'F#4' }, { note: 'G4', hasBlack: true, blackNote: 'G#4' }, { note: 'A4', hasBlack: true, blackNote: 'A#4' }, { note: 'B4', hasBlack: false },
+  { note: 'C5', hasBlack: true, blackNote: 'C#5' }, { note: 'D5', hasBlack: true, blackNote: 'D#5' }, { note: 'E5', hasBlack: false }, { note: 'F5', hasBlack: true, blackNote: 'F#5' }, { note: 'G5', hasBlack: true, blackNote: 'G#5' }, { note: 'A5', hasBlack: true, blackNote: 'A#5' }, { note: 'B5', hasBlack: false },
+  { note: 'C6', hasBlack: false }
+];
+
+// LISTA UTWORÓW W ROLCE
+const sheetMusicList = [
+  { id: 'wlazl-kotek', title: 'Wlazł kotek na płotek', image: '/nuty-wlazl-kotek.jpg' },
+  { id: 'kurki-trzy', title: 'Kurki trzy', image: '/nuty-kurki.jpg' },
+  { id: 'sto-lat', title: 'Sto lat', image: '/nuty-sto-lat.jpg' }
+];
+
+const PianoSimulator = () => {
+  const audioCtxRef = useRef(null);
+  const [activeNote, setActiveNote] = useState(null);
+  const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
+
+  const currentSheet = sheetMusicList[currentSheetIndex];
+
+  const nextSheet = () => {
+    setCurrentSheetIndex((prev) => (prev + 1) % sheetMusicList.length);
+  };
+
+  const prevSheet = () => {
+    setCurrentSheetIndex((prev) => (prev - 1 + sheetMusicList.length) % sheetMusicList.length);
+  };
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+  };
+
+  const playNote = (note) => {
+    initAudio();
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = 'triangle'; // Brzmienie zbliżone do prostego pianina
+    osc.frequency.setValueAtTime(noteFrequencies[note], ctx.currentTime);
+
+    // ADSR Envelope
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 1);
+
+    setActiveNote(note);
+    setTimeout(() => setActiveNote(null), 200);
+  };
+
+  return (
+    <section className="py-20 bg-gradient-to-b from-white to-violet-50">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 text-orange-500 mb-4">
+            <Music className="w-8 h-8" />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Spróbuj zagrać!</h2>
+          <div className="w-24 h-1.5 bg-orange-500 mx-auto rounded-full mb-6"></div>
+          <p className="text-lg text-gray-600">
+            Wybierz utwór z listy poniżej i zagraj go na naszej wirtualnej klawiaturze, korzystając z podpisanych nut.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 md:p-8 shadow-2xl border border-violet-100">
+          
+          {/* ROLKA Z NUTAMI (KARUZELA) */}
+          <div className="mb-8 bg-violet-50/50 rounded-2xl p-4 md:p-6 border border-violet-100">
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-bold text-violet-900">{currentSheet.title}</h3>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 md:gap-4">
+              {/* Lewa strzałka */}
+              <button
+                onClick={prevSheet}
+                className="p-2 md:p-3 bg-white rounded-full shadow-md border border-violet-100 hover:bg-violet-100 hover:text-violet-700 transition-all flex-shrink-0"
+                aria-label="Poprzednie nuty"
+              >
+                <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+
+              {/* Wyświetlacz wybranego obrazka z nutami */}
+              <div className="flex-1 flex justify-center items-center bg-white rounded-xl p-2 md:p-4 border border-gray-200 min-h-[160px] overflow-hidden shadow-inner">
+                <img 
+                  src={currentSheet.image} 
+                  alt={`Nuty do: ${currentSheet.title}`}
+                  key={currentSheet.image} /* Wymusza odświeżenie elementu (animacji) przy zmianie */
+                  className="max-h-48 md:max-h-64 object-contain max-w-full rounded-lg mix-blend-multiply animate-fade-in"
+                  onError={(e) => { 
+                    // Zabezpieczenie na wypadek braku pliku lub złego rozszerzenia (png/jpg)
+                    if (e.target.src.endsWith('.jpg')) {
+                      e.target.src = currentSheet.image.replace('.jpg', '.png');
+                    } else {
+                      e.target.onerror = null;
+                      e.target.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="150"><rect width="600" height="150" fill="%23f8fafc"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%239ca3af">Brak pliku obrazka: ${currentSheet.image.replace('.png', '')}(.jpg/.png) w folderze public</text></svg>`;
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Prawa strzałka */}
+              <button
+                onClick={nextSheet}
+                className="p-2 md:p-3 bg-white rounded-full shadow-md border border-violet-100 hover:bg-violet-100 hover:text-violet-700 transition-all flex-shrink-0"
+                aria-label="Następne nuty"
+              >
+                <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+            </div>
+            
+            {/* Wskaźnik (Kropki) */}
+            <div className="flex justify-center gap-2 mt-6">
+              {sheetMusicList.map((_, idx) => (
+                <div 
+                  key={idx} 
+                  className={`h-2 rounded-full transition-all duration-300 ${idx === currentSheetIndex ? 'w-6 bg-violet-600' : 'w-2 bg-violet-200'}`}
+                ></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Klawiatura Pianina */}
+          <div className="relative flex w-full h-48 md:h-56 bg-gray-900 rounded-xl overflow-x-auto overflow-y-hidden touch-pan-x shadow-inner" style={{ userSelect: 'none' }}>
+            <div className="flex w-full min-w-[800px] h-full">
+              {whiteKeys.map((key, idx) => (
+                <div key={key.note} className="flex-1 relative h-full">
+                  {/* Biały klawisz */}
+                  <div 
+                    onMouseDown={() => playNote(key.note)}
+                    onTouchStart={(e) => { e.preventDefault(); playNote(key.note); }}
+                    className={`absolute inset-0 border border-gray-300 rounded-b-md shadow-sm transition-colors cursor-pointer ${activeNote === key.note ? 'bg-orange-200' : 'bg-white hover:bg-gray-100'} z-0`}
+                  >
+                    <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-gray-400 font-bold pointer-events-none">
+                      {key.note.replace(/[0-9]/g, '')}
+                    </span>
+                  </div>
+                  
+                  {/* Czarny klawisz */}
+                  {key.hasBlack && (
+                    <div 
+                      onMouseDown={(e) => { e.stopPropagation(); playNote(key.blackNote); }}
+                      onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); playNote(key.blackNote); }}
+                      className={`absolute top-0 -right-[30%] w-[60%] h-[60%] rounded-b-md shadow-md transition-colors cursor-pointer z-10 ${activeNote === key.blackNote ? 'bg-fuchsia-600' : 'bg-gray-900 hover:bg-gray-800'}`}
+                    ></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-4">Naciśnij białe lub czarne klawisze, aby zagrać dźwięk. Na telefonie możesz je przesuwać palcem w lewo i prawo.</p>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 // --- Komponenty sekcji ---
 
@@ -20,48 +269,43 @@ const Navbar = ({ isMenuOpen, setIsMenuOpen }) => (
   <nav className="fixed w-full z-50 bg-white/95 backdrop-blur-sm shadow-sm">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-20 items-center">
-        {/* Logo */}
-        <div className="flex-shrink-0 flex items-center cursor-pointer">
-          <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center mr-3 shadow-lg shadow-indigo-200">
-            <Music className="h-6 w-6 text-white" />
-          </div>
-          <span className="font-extrabold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-rose-500">
+        <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+          {/* Logo 1 (bez podpisu) */}
+          <img 
+            src="/logo1.png" 
+            alt="Logo Barwy Muzyki" 
+            className="w-16 h-16 object-contain mix-blend-multiply mr-2"
+            onError={(e) => { e.target.src = '/logo1.jpg' }} // Zabezpieczenie rozszerzenia pliku
+          />
+          <span className="font-extrabold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500 hidden sm:block">
             Barwy Muzyki
           </span>
         </div>
 
-        {/* Desktop Menu */}
         <div className="hidden md:flex space-x-8 items-center">
-          <a href="#o-nas" className="text-gray-600 hover:text-indigo-600 font-medium transition-colors">O nas</a>
-          <a href="#oferta" className="text-gray-600 hover:text-rose-500 font-medium transition-colors">Oferta</a>
-          <a href="#dlaczego-my" className="text-gray-600 hover:text-amber-500 font-medium transition-colors">Dlaczego my?</a>
-          <a href="#kontakt" className="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-2.5 rounded-full font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-            Zapisz dziecko
+          <a href="#o-nas" className="text-gray-600 hover:text-violet-600 font-medium transition-colors">O nas</a>
+          <a href="#oferta" className="text-gray-600 hover:text-fuchsia-500 font-medium transition-colors">Oferta</a>
+          <a href="#grafik" className="text-gray-600 hover:text-emerald-500 font-medium transition-colors">Grafik Zajęć</a>
+          <a href="#kontakt" className="bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white px-6 py-2.5 rounded-full font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+            Zapisy
           </a>
         </div>
 
-        {/* Mobile menu button */}
         <div className="md:hidden flex items-center">
-          <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="text-gray-600 hover:text-indigo-600 focus:outline-none p-2"
-          >
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-violet-600 focus:outline-none p-2">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
     </div>
 
-    {/* Mobile Menu */}
     {isMenuOpen && (
       <div className="md:hidden bg-white border-t border-gray-100 shadow-xl absolute w-full">
         <div className="px-4 pt-2 pb-6 space-y-2">
-          <a href="#o-nas" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl">O nas</a>
-          <a href="#oferta" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-rose-500 hover:bg-rose-50 rounded-xl">Oferta</a>
-          <a href="#dlaczego-my" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-500 hover:bg-amber-50 rounded-xl">Dlaczego my?</a>
-          <a href="#kontakt" onClick={() => setIsMenuOpen(false)} className="block mt-4 px-3 py-3 text-center text-base font-medium bg-indigo-600 text-white rounded-xl shadow-md">
-            Skontaktuj się
-          </a>
+          <a href="#o-nas" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-violet-600 hover:bg-violet-50 rounded-xl">O nas</a>
+          <a href="#oferta" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-fuchsia-500 hover:bg-fuchsia-50 rounded-xl">Oferta</a>
+          <a href="#grafik" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl">Grafik Zajęć</a>
+          <a href="#kontakt" onClick={() => setIsMenuOpen(false)} className="block mt-4 px-3 py-3 text-center text-base font-medium bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white rounded-xl shadow-md">Skontaktuj się</a>
         </div>
       </div>
     )}
@@ -69,53 +313,59 @@ const Navbar = ({ isMenuOpen, setIsMenuOpen }) => (
 );
 
 const Hero = () => (
-  <div className="relative bg-indigo-50 pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
-    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
-      <div className="absolute top-48 -right-24 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-24 left-48 w-96 h-96 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
+  <div id="o-nas" className="relative bg-violet-50/30 pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
+    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-fuchsia-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
+      <div className="absolute top-48 -right-24 w-96 h-96 bg-violet-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-24 left-48 w-96 h-96 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
     </div>
 
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="text-center md:text-left">
-          <div className="inline-flex items-center px-4 py-2 rounded-full bg-white text-indigo-600 font-semibold text-sm shadow-sm mb-6 border border-indigo-100">
-            <Star className="w-4 h-4 mr-2 text-amber-400 fill-amber-400" />
-            Prywatna Szkoła Muzyczna dla Dzieci
+          
+          <div className="flex flex-col sm:flex-row items-center md:items-start gap-4 mb-6">
+            {/* Logo 2 (z podpisem) - Powiększone w kółku */}
+            <div className="bg-white rounded-full shadow-xl border-4 border-white inline-flex items-center justify-center w-36 h-36 sm:w-44 sm:h-44 overflow-hidden relative flex-shrink-0">
+              <img 
+                src="/logo2.png" 
+                alt="Logo Ogniska" 
+                className="absolute w-[110%] h-[110%] max-w-none object-contain mix-blend-multiply"
+                onError={(e) => { e.target.src = '/logo2.jpg' }}
+              />
+            </div>
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white text-violet-600 font-semibold text-sm shadow-sm border border-violet-100 sm:mt-10">
+              <MapPin className="w-4 h-4 mr-2 text-fuchsia-500" />
+              Ognisko Muzyczne w Wasilkowie
+            </div>
           </div>
+
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
-            Rozbudź w dziecku <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-rose-500">pasję do muzyki!</span>
+            Rozbudź w dziecku <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500">pasję do muzyki!</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-lg mx-auto md:mx-0">
-            Uczymy gry na pianinie i ukulele poprzez zabawę. W "Barwach Muzyki" wprowadzamy dzieci w magiczny świat dźwięków w przyjaznej, bezstresowej atmosferze.
+            Zapraszamy na zajęcia przy Dwujęzycznej Prywatnej Szkole Podstawowej im. Antoniego Bućko. Uczymy gry, śpiewu i wprowadzamy dzieci w magiczny świat dźwięków w bezstresowej atmosferze.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-            <a href="#oferta" className="px-8 py-4 text-lg font-bold rounded-full text-white bg-rose-500 hover:bg-rose-600 shadow-lg hover:shadow-rose-300 transition-all flex items-center justify-center">
-              Poznaj Ofertę <ChevronRight className="ml-2 w-5 h-5" />
+            <a href="#grafik" className="px-8 py-4 text-lg font-bold rounded-full text-white bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:from-fuchsia-600 hover:to-orange-600 shadow-lg hover:shadow-fuchsia-300 transition-all flex items-center justify-center">
+              Sprawdź Grafik <ChevronRight className="ml-2 w-5 h-5" />
             </a>
-            <a href="#kontakt" className="px-8 py-4 text-lg font-bold rounded-full text-indigo-700 bg-white hover:bg-gray-50 border-2 border-indigo-100 shadow-sm transition-all flex items-center justify-center">
-              Darmowa lekcja próbna
+            <a href="#kontakt" className="px-8 py-4 text-lg font-bold rounded-full text-violet-700 bg-white hover:bg-violet-50 border-2 border-violet-100 shadow-sm transition-all flex items-center justify-center">
+              Zapisz się
             </a>
           </div>
         </div>
         
         <div className="relative hidden md:block">
           <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform rotate-2 hover:rotate-0 transition-transform duration-500">
-            <img 
-              src="https://images.unsplash.com/photo-1514119412350-e174d90d280e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
-              alt="Dzieci grające na instrumentach" 
-              className="w-full h-[500px] object-cover"
-            />
+            <img src="https://images.unsplash.com/photo-1514119412350-e174d90d280e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Dzieci grające na instrumentach" className="w-full h-[500px] object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
           </div>
-          {/* Floating badge */}
           <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-4 border border-gray-100 animate-bounce">
-            <div className="bg-amber-100 p-3 rounded-full">
-              <Smile className="w-8 h-8 text-amber-500" />
-            </div>
+            <div className="bg-orange-100 p-3 rounded-full"><Smile className="w-8 h-8 text-orange-500" /></div>
             <div>
               <p className="text-sm text-gray-500 font-medium">Uśmiech gwarantowany</p>
-              <p className="font-bold text-gray-900">Zabawa i nauka</p>
+              <p className="font-bold text-gray-900">Koncerty Świąteczne</p>
             </div>
           </div>
         </div>
@@ -128,155 +378,195 @@ const Offer = () => (
   <section id="oferta" className="py-20 bg-white">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-16">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Nasze Instrumenty</h2>
-        <div className="w-24 h-1.5 bg-gradient-to-r from-indigo-500 to-rose-500 mx-auto rounded-full mb-6"></div>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Nasza Oferta</h2>
+        <div className="w-24 h-1.5 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-orange-500 mx-auto rounded-full mb-6"></div>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Specjalizujemy się w nauce gry na dwóch wspaniałych instrumentach, idealnych na początek muzycznej przygody.
+          Dopasowujemy zajęcia do wieku i zainteresowań. Od wczesnego umuzykalniania po grę na instrumentach i śpiew.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-12">
-        {/* Pianino */}
-        <div className="bg-indigo-50 rounded-3xl p-8 md:p-10 border border-indigo-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-             <Music className="w-48 h-48 text-indigo-900" />
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        
+        {/* Zajęcia Umuzykalniające */}
+        <div className="bg-emerald-50 rounded-3xl p-8 border border-emerald-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+             <Puzzle className="w-32 h-32 text-emerald-900" />
           </div>
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-200">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+            <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-emerald-200">
+              <Puzzle className="w-7 h-7 text-white" />
             </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">Pianino</h3>
-            <p className="text-gray-600 text-lg mb-6 leading-relaxed">
-              Król instrumentów! Nauka gry na pianinie doskonale rozwija wyobraźnię przestrzenną, koordynację obu rąk oraz wrażliwość muzyczną. Zajęcia prowadzimy w sposób autorski, łącząc klasykę z ulubionymi melodiami dzieci.
-            </p>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-center text-gray-700 font-medium"><Star className="w-5 h-5 text-indigo-500 mr-3" /> Dla dzieci od 5 roku życia</li>
-              <li className="flex items-center text-gray-700 font-medium"><Star className="w-5 h-5 text-indigo-500 mr-3" /> Indywidualny tok nauczania</li>
-              <li className="flex items-center text-gray-700 font-medium"><Star className="w-5 h-5 text-indigo-500 mr-3" /> Kolorowe nuty dla najmłodszych</li>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Zajęcia Umuzykalniające</h3>
+            <p className="text-gray-600 mb-6">Pierwszy kontakt z rytmem i melodią. Zajęcia pełne ruchu i zabaw muzycznych dla najmłodszych.</p>
+            <ul className="space-y-2 mb-6 text-sm">
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-emerald-500 mr-2" /> Grupy 4-5 lat</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-emerald-500 mr-2" /> Grupy 6-7 lat</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-emerald-500 mr-2" /> Grupy 8-9 lat</li>
             </ul>
-            <a href="#kontakt" className="inline-block bg-white text-indigo-600 font-bold px-6 py-3 rounded-xl shadow hover:shadow-md border border-indigo-100 transition-all">
-              Zapytaj o terminy
-            </a>
+          </div>
+        </div>
+
+        {/* Pianino */}
+        <div className="bg-violet-50 rounded-3xl p-8 border border-violet-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+             <Music className="w-32 h-32 text-violet-900" />
+          </div>
+          <div className="relative z-10">
+            <div className="w-14 h-14 bg-violet-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-violet-200">
+              <Music className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Pianino</h3>
+            <p className="text-gray-600 mb-6">Król instrumentów. Rozwija koordynację, wyobraźnię i wrażliwość muzyczną. Indywidualne podejście.</p>
+            <ul className="space-y-2 mb-6 text-sm">
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-violet-500 mr-2" /> Nauka od podstaw</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-violet-500 mr-2" /> Kolorowe nuty</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-violet-500 mr-2" /> Ulubione melodie</li>
+            </ul>
           </div>
         </div>
 
         {/* Ukulele */}
-        <div className="bg-rose-50 rounded-3xl p-8 md:p-10 border border-rose-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-             <Guitar className="w-48 h-48 text-rose-900" />
+        <div className="bg-orange-50 rounded-3xl p-8 border border-orange-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+             <Guitar className="w-32 h-32 text-orange-900" />
           </div>
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-rose-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-rose-200">
-              <Guitar className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-orange-200">
+              <Guitar className="w-7 h-7 text-white" />
             </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">Ukulele</h3>
-            <p className="text-gray-600 text-lg mb-6 leading-relaxed">
-              Mały instrument o wielkim sercu! Ukulele to absolutny hit ze względu na swoje rozmiary i szybkość osiągania pierwszych efektów. Dzieci uwielbiają je za wesołe brzmienie i łatwość nauki podstawowych akordów.
-            </p>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-center text-gray-700 font-medium"><Star className="w-5 h-5 text-rose-500 mr-3" /> Dla dzieci od 6 roku życia</li>
-              <li className="flex items-center text-gray-700 font-medium"><Star className="w-5 h-5 text-rose-500 mr-3" /> Szybkie efekty i nauka piosenek</li>
-              <li className="flex items-center text-gray-700 font-medium"><Star className="w-5 h-5 text-rose-500 mr-3" /> Rozwój poczucia rytmu</li>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Ukulele</h3>
+            <p className="text-gray-600 mb-6">Mały instrument o wielkim sercu. Szybkie efekty i nauka akordów. Oferujemy zajęcia grupowe!</p>
+            <ul className="space-y-2 mb-6 text-sm">
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-orange-500 mr-2" /> Dzieci (6-7 lat)</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-orange-500 mr-2" /> Młodzież</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-orange-500 mr-2" /> Grupy dla Dorosłych</li>
             </ul>
-            <a href="#kontakt" className="inline-block bg-white text-rose-600 font-bold px-6 py-3 rounded-xl shadow hover:shadow-md border border-rose-100 transition-all">
-              Zapytaj o terminy
-            </a>
           </div>
         </div>
+
+        {/* Śpiew */}
+        <div className="bg-blue-50 rounded-3xl p-8 border border-blue-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+             <Mic2 className="w-32 h-32 text-blue-900" />
+          </div>
+          <div className="relative z-10">
+            <div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-200">
+              <Mic2 className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Śpiew i Zespół</h3>
+            <p className="text-gray-600 mb-6">Odkrywamy potencjał głosu. Uczymy prawidłowego oddechu, dykcji i współpracy w grupie.</p>
+            <ul className="space-y-2 mb-6 text-sm">
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-blue-500 mr-2" /> Emisja głosu</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-blue-500 mr-2" /> Praca z mikrofonem</li>
+              <li className="flex items-center text-gray-700 font-medium"><Star className="w-4 h-4 text-blue-500 mr-2" /> Zespół Wokalny</li>
+            </ul>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
 );
 
-const WhyUs = () => (
-  <section id="dlaczego-my" className="py-20 bg-gray-50">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col md:flex-row gap-16 items-center">
-        <div className="md:w-1/2">
-          <div className="grid grid-cols-2 gap-4">
-            <img src="https://images.unsplash.com/photo-1552422535-c45813c61732?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Chłopiec grający na pianinie" className="rounded-2xl shadow-lg w-full h-48 object-cover" />
-            <img src="https://images.unsplash.com/photo-1543840950-6ce32179bdf9?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Dziewczynka z ukulele" className="rounded-2xl shadow-lg w-full h-48 object-cover mt-8" />
-          </div>
-        </div>
-        
-        <div className="md:w-1/2">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">Dlaczego "Barwy Muzyki"?</h2>
-          <p className="text-lg text-gray-600 mb-8">
-            Nasze ognisko muzyczne to miejsce stworzone z myślą o dzieciach. Wierzymy, że muzyka to nie sucha teoria, ale wspaniała kolorowa przygoda.
-          </p>
-          
-          <div className="space-y-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600">
-                  <Heart className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <h4 className="text-xl font-bold text-gray-900">Nauka bez stresu</h4>
-                <p className="mt-1 text-gray-600">Nie robimy rygorystycznych egzaminów. Skupiamy się na czerpaniu radości z grania i budowaniu pewności siebie.</p>
-              </div>
-            </div>
-
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-100 text-amber-600">
-                  <Users className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <h4 className="text-xl font-bold text-gray-900">Wykwalifikowana Kadra</h4>
-                <p className="mt-1 text-gray-600">Nasi nauczyciele to nie tylko świetni muzycy, ale przede wszystkim wspaniali pedagodzy z doskonałym podejściem do najmłodszych.</p>
-              </div>
-            </div>
-
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-rose-100 text-rose-600">
-                  <Music className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <h4 className="text-xl font-bold text-gray-900">Materiały dopasowane do dzieci</h4>
-                <p className="mt-1 text-gray-600">Używamy nowoczesnych, kolorowych podręczników, naklejek i gier edukacyjnych, aby teoria była banalnie prosta.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
-const Testimonials = () => (
-  <section className="py-20 bg-white">
+const Schedule = () => (
+  <section id="grafik" className="py-20 bg-gray-50">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-16">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Co mówią rodzice?</h2>
-        <div className="w-24 h-1.5 bg-amber-400 mx-auto rounded-full"></div>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet-100 text-violet-600 mb-4">
+          <Calendar className="w-8 h-8" />
+        </div>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Grafik Zajęć Grupowych</h2>
+        <div className="w-24 h-1.5 bg-violet-600 mx-auto rounded-full mb-6"></div>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Sprawdź nasz harmonogram zajęć grupowych na bieżący rok szkolny.
+        </p>
       </div>
-      
-      <div className="grid md:grid-cols-3 gap-8">
-        {[
-          { name: "Katarzyna, mama 7-letniej Zosi", text: "Zosia uwielbia zajęcia z pianina! Wcześniej próbowała w innej szkole i szybko się zniechęciła. W Barwach Muzyki odzyskała zapał, a nauczycielka jest przekochana." },
-          { name: "Michał, tata 6-letniego Antka", text: "Ukulele to był strzał w dziesiątkę. Po kilku lekcjach Antek zagrał nam pierwszy utwór w domu. Pełen profesjonalizm i świetne podejście do dzieciaków." },
-          { name: "Anna, mama 9-letniego Filipa", text: "Świetna atmosfera i bardzo jasny przekaz. Nauczyciel ma anielską cierpliwość. Widzę, że zajęcia bardzo rozwijają moje dziecko nie tylko muzycznie." }
-        ].map((testimonial, idx) => (
-          <div key={idx} className="bg-white border border-gray-100 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-shadow relative">
-            <div className="flex text-amber-400 mb-4">
-              {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current" />)}
-            </div>
-            <p className="text-gray-600 italic mb-6">"{testimonial.text}"</p>
-            <p className="font-bold text-gray-900 text-sm">{testimonial.name}</p>
+
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        
+        {/* Środy */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-fuchsia-100 py-4 px-8 border-b border-fuchsia-200">
+            <h3 className="text-2xl font-bold text-fuchsia-900 tracking-wide text-center uppercase">Środy</h3>
           </div>
-        ))}
+          <div className="p-8">
+            <ul className="space-y-4">
+              <li className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <span className="font-bold text-gray-900 text-lg w-32">16:15 - 17:00</span>
+                <span className="text-gray-600 font-medium text-right">Umuzykalnienie (8-9 lat)</span>
+              </li>
+              <li className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <span className="font-bold text-gray-900 text-lg w-32">16:15 - 16:45</span>
+                <span className="text-gray-600 font-medium text-right">Ukulele (6 latki)</span>
+              </li>
+              <li className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <span className="font-bold text-gray-900 text-lg w-32">17:00 - 17:45</span>
+                <span className="text-gray-600 font-medium text-right">Ukulele (7 latki)</span>
+              </li>
+              <li className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <span className="font-bold text-gray-900 text-lg w-32">18:00 - 18:45</span>
+                <span className="text-gray-600 font-medium text-right">Ukulele (Młodzież)</span>
+              </li>
+              <li className="flex items-center justify-between pt-2">
+                <span className="font-bold text-gray-900 text-lg w-32">19:00 - 20:00</span>
+                <span className="text-gray-600 font-medium text-right">Ukulele (Dorośli)</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Piątki */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-blue-100 py-4 px-8 border-b border-blue-200">
+            <h3 className="text-2xl font-bold text-blue-900 tracking-wide text-center uppercase">Piątki</h3>
+          </div>
+          <div className="p-8">
+            <ul className="space-y-4">
+              <li className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <span className="font-bold text-gray-900 text-lg w-32">16:30 - 17:00</span>
+                <span className="text-gray-600 font-medium text-right">Umuzykalnienie (4-5 lat)</span>
+              </li>
+              <li className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <span className="font-bold text-gray-900 text-lg w-32">16:30 - 17:15</span>
+                <span className="text-gray-600 font-medium text-right">Umuzykalnienie (6-7 lat)</span>
+              </li>
+              <li className="flex items-center justify-between pt-2">
+                <span className="font-bold text-gray-900 text-lg w-32">17:15 - 18:00</span>
+                <span className="text-gray-600 font-medium text-right">Zespół Wokalny</span>
+              </li>
+            </ul>
+            
+            <div className="mt-10 p-6 bg-orange-50 rounded-2xl border border-orange-100 text-center">
+              <p className="text-orange-800 font-medium">Brak pasującego terminu? <br/> Prowadzimy również lekcje indywidualne!</p>
+              <a href="#kontakt" className="inline-block mt-3 text-orange-600 font-bold hover:underline">Skontaktuj się z nami &rarr;</a>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {/* Dodatkowy Baner Informacyjny o Pianinie */}
+      <div className="mt-8 max-w-5xl mx-auto bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-3xl p-6 md:p-8 border border-violet-100 flex flex-col md:flex-row items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center mb-6 md:mb-0">
+          <div className="w-14 h-14 bg-violet-600 rounded-2xl flex items-center justify-center mr-6 flex-shrink-0 shadow-md">
+            <Music className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h4 className="text-xl font-bold text-gray-900 mb-1">Pianino – Lekcje Indywidualne</h4>
+            <p className="text-gray-600">Zajęcia z gry na pianinie mają charakter indywidualny. Dni i godziny spotkań są ustalane bezpośrednio z nauczycielem, co pozwala idealnie dopasować je do Twojego planu dnia.</p>
+          </div>
+        </div>
+        <a href="#kontakt" className="whitespace-nowrap px-8 py-3 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl transition-colors shadow-md md:ml-6">
+          Zapytaj o wolny termin
+        </a>
+      </div>
+
     </div>
   </section>
 );
 
-const Contact = () => {
-  const [formStatus, setFormStatus] = useState('idle'); // 'idle', 'submitting', 'success', 'error'
+const Contact = ({ onOpenPrivacy }) => {
+  const [formStatus, setFormStatus] = useState('idle');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -286,13 +576,11 @@ const Contact = () => {
     const data = new FormData(form);
 
     try {
-      // UWAGA: Zastąp poniższy URL swoim linkiem z Formspree (np. https://formspree.io/f/twoj_kod)
-      const response = await fetch("https://formspree.io/f/maqddlnd", {
+      // UWAGA: Zastąp ten URL swoim linkiem z Formspree
+      const response = await fetch("Thttps://formspree.io/f/maqddlnd", {
         method: "POST",
         body: data,
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
       });
       
       if (response.ok) {
@@ -307,43 +595,37 @@ const Contact = () => {
   };
 
   return (
-    <section id="kontakt" className="py-20 bg-indigo-900 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-900 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+    <section id="kontakt" className="py-20 bg-violet-900 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-violet-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50 pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-900 rounded-full mix-blend-multiply filter blur-3xl opacity-50 pointer-events-none"></div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
           
-          {/* Contact Info */}
-          <div className="md:w-5/12 bg-gradient-to-br from-indigo-600 to-indigo-800 p-10 text-white flex flex-col justify-between">
+          <div className="md:w-5/12 bg-gradient-to-br from-violet-600 to-violet-800 p-10 text-white flex flex-col justify-between">
             <div>
-              <h3 className="text-3xl font-bold mb-2">Skontaktuj się z nami</h3>
-              <p className="text-indigo-200 mb-8">Zadzwoń lub napisz, aby umówić się na pierwszą, darmową lekcję próbną!</p>
+              <h3 className="text-3xl font-bold mb-2">Zapisy i Informacje</h3>
+              <p className="text-violet-200 mb-8">Zadzwoń lub napisz do nas. Chętnie odpowiemy na wszystkie pytania!</p>
               
               <div className="space-y-6">
-                <div className="flex items-center">
-                  <Phone className="w-6 h-6 text-indigo-300 mr-4" />
-                  <span className="text-lg">+48 123 456 789</span>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="w-6 h-6 text-indigo-300 mr-4" />
-                  <span className="text-lg">kontakt@barwymuzyki.pl</span>
-                </div>
-                <div className="flex items-start">
-                  <MapPin className="w-6 h-6 text-indigo-300 mr-4 mt-1" />
-                  <span className="text-lg">ul. Muzyczna 15/2<br/>00-123 Warszawa</span>
-                </div>
+                <div className="flex items-center"><Phone className="w-6 h-6 text-violet-300 mr-4" /><span className="text-lg">730 501 950</span></div>
+                <div className="flex items-center"><Mail className="w-6 h-6 text-violet-300 mr-4" /><span className="text-lg text-sm sm:text-base">ogniskobarwymuzyki@gmail.com</span></div>
+                <div className="flex items-center"><Facebook className="w-6 h-6 text-violet-300 mr-4" /><span className="text-lg">Ognisko Muzyczne w Wasilkowie "Barwy Muzyki"</span></div>
               </div>
             </div>
             
-            <div className="mt-12">
-              <p className="text-sm text-indigo-200 font-medium">Godziny otwarcia:</p>
-              <p className="text-white">Pon - Pt: 14:00 - 20:00</p>
-              <p className="text-white">Sobota: 10:00 - 15:00</p>
+            <div className="mt-12 bg-white/10 p-6 rounded-2xl border border-white/20">
+              <div className="flex items-start">
+                <MapPin className="w-8 h-8 text-fuchsia-400 mr-4 mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-lg mb-1">Gdzie gramy?</p>
+                  <p className="text-violet-100">ul. Antoniego Bućki 10<br/>Wasilków</p>
+                  <p className="text-xs text-violet-200 mt-2">Budynek Dwujęzycznej Prywatnej Szkoły Podstawowej im. Antoniego Bućko</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Contact Form */}
           <div className="md:w-7/12 p-10 bg-white">
             {formStatus === 'success' ? (
               <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-12 animate-fade-in">
@@ -352,49 +634,55 @@ const Contact = () => {
                 </div>
                 <h4 className="text-2xl font-bold text-gray-900">Dziękujemy za wiadomość!</h4>
                 <p className="text-gray-600">Skontaktujemy się z Tobą najszybciej jak to możliwe.</p>
-                <button onClick={() => setFormStatus('idle')} className="mt-6 text-indigo-600 font-medium hover:text-indigo-800 transition-colors">Wyślij kolejną wiadomość</button>
+                <button onClick={() => setFormStatus('idle')} className="mt-6 text-violet-600 font-medium hover:text-violet-800 transition-colors">Wyślij kolejną wiadomość</button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Imię i nazwisko rodzica</label>
-                    <input type="text" name="parentName" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Jan Kowalski" />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Imię i nazwisko <span className="text-fuchsia-500">*</span></label>
+                    <input type="text" name="name" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" placeholder="Jan Kowalski" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Wiek dziecka</label>
-                    <input type="number" name="childAge" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="np. 7" />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Wiek ucznia (jeśli dziecko) <span className="text-fuchsia-500">*</span></label>
+                    <input type="text" name="age" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" placeholder="np. 7 lat / dorosły" />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Numer telefonu</label>
-                    <input type="tel" name="phone" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="+48 ..." />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Numer telefonu <span className="text-fuchsia-500">*</span></label>
+                    <input type="tel" name="phone" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" placeholder="730 ..." />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Interesujący instrument</label>
-                    <select name="instrument" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Interesujące zajęcia</label>
+                    <select name="instrument" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all bg-white">
+                      <option value="Umuzykalnienie">Zajęcia Umuzykalniające</option>
                       <option value="Pianino">Pianino</option>
                       <option value="Ukulele">Ukulele</option>
+                      <option value="Spiew">Śpiew / Zespół Wokalny</option>
                       <option value="Nie wiem">Jeszcze nie wiem</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Wiadomość (opcjonalnie)</label>
-                  <textarea name="message" rows="4" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Czy macie wolne terminy we wtorki?"></textarea>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Wiadomość / Pytania (opcjonalnie)</label>
+                  <textarea name="message" rows="3" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" placeholder="Np. Pytanie o grupę Ukulele dla dorosłych..."></textarea>
                 </div>
 
-                {formStatus === 'error' && (
-                  <p className="text-red-500 text-sm">Wystąpił błąd podczas wysyłania wiadomości. Spróbuj ponownie później.</p>
-                )}
+                <div className="flex items-start gap-3 mt-4">
+                  <input type="checkbox" id="rodo-consent" name="rodoConsent" required className="mt-1 w-4 h-4 text-violet-600 bg-gray-100 border-gray-300 rounded focus:ring-violet-500" />
+                  <label htmlFor="rodo-consent" className="text-xs text-gray-600 leading-relaxed">
+                    Wyrażam zgodę na przetwarzanie moich danych osobowych przez Ognisko Muzyczne Barwy Muzyki w celu udzielenia odpowiedzi na zapytanie. Zapoznałem/am się z <button type="button" onClick={onOpenPrivacy} className="text-violet-600 hover:underline font-medium">Polityką Prywatności</button>. <span className="text-fuchsia-500">*</span>
+                  </label>
+                </div>
 
-                <button type="submit" disabled={formStatus === 'submitting'} className="w-full bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center">
+                {formStatus === 'error' && <p className="text-red-500 text-sm">Wystąpił błąd podczas wysyłania. Zadzwoń do nas bezpośrednio.</p>}
+
+                <button type="submit" disabled={formStatus === 'submitting'} className="w-full bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:from-fuchsia-600 hover:to-orange-600 disabled:opacity-50 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center">
                   {formStatus === 'submitting' ? 'Wysyłanie...' : 'Wyślij zapytanie'}
                 </button>
-                <p className="text-xs text-gray-500 text-center">Administratorem Twoich danych jest Ognisko Muzyczne Barwy Muzyki. Wysyłając formularz zgadzasz się z polityką prywatności.</p>
               </form>
             )}
           </div>
@@ -404,20 +692,29 @@ const Contact = () => {
   );
 };
 
-const Footer = () => (
+const Footer = ({ onOpenPrivacy, onOpenTerms }) => (
   <footer className="bg-gray-900 text-gray-400 py-12 text-center">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-center items-center mb-6 opacity-80">
-        <Music className="h-6 w-6 mr-2" />
-        <span className="font-bold text-xl text-white">Barwy Muzyki</span>
+        <div className="bg-white p-1 rounded-full mr-3 shadow-md">
+          {/* Logo 1 (bez podpisu) w stopce */}
+          <img 
+            src="/logo1.png" 
+            alt="Logo Barwy Muzyki" 
+            className="w-10 h-10 rounded-full object-contain mix-blend-multiply"
+            onError={(e) => { e.target.src = '/logo1.jpg' }}
+          />
+        </div>
+        <span className="font-bold text-xl text-white">Barwy Muzyki Wasilków</span>
       </div>
-      <p className="mb-4">Prywatna Szkoła Muzyczna dla Dzieci. Uczymy z pasją i uśmiechem.</p>
+      <p className="mb-4">Ognisko Muzyczne dla Dzieci, Młodzieży i Dorosłych. Uczymy z pasją i uśmiechem.</p>
+      
       <div className="flex justify-center space-x-6 mb-8 text-sm">
-        <a href="#" className="hover:text-white transition-colors">Polityka prywatności</a>
-        <a href="#" className="hover:text-white transition-colors">Regulamin</a>
-        <a href="#" className="hover:text-white transition-colors">Cennik</a>
+        <button onClick={onOpenPrivacy} className="hover:text-white transition-colors underline-offset-4 hover:underline">Polityka prywatności</button>
+        <button onClick={onOpenTerms} className="hover:text-white transition-colors underline-offset-4 hover:underline">Regulamin Serwisu</button>
       </div>
-      <p className="text-sm border-t border-gray-800 pt-8">&copy; {new Date().getFullYear()} Ognisko Muzyczne Barwy Muzyki. Wszelkie prawa zastrzeżone.</p>
+      
+      <p className="text-sm border-t border-gray-800 pt-8">&copy; {new Date().getFullYear()} Ognisko Muzyczne Barwy Muzyki w Wasilkowie. Wszelkie prawa zastrzeżone.</p>
     </div>
   </footer>
 );
@@ -426,16 +723,44 @@ const Footer = () => (
 
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   return (
     <div className="min-h-screen font-sans bg-gray-50 text-gray-900 scroll-smooth">
       <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <Hero />
       <Offer />
-      <WhyUs />
-      <Testimonials />
-      <Contact />
-      <Footer />
+      <PianoSimulator />
+      <Schedule />
+      
+      <Contact onOpenPrivacy={() => setIsPrivacyOpen(true)} />
+      <Footer 
+        onOpenPrivacy={() => setIsPrivacyOpen(true)} 
+        onOpenTerms={() => setIsTermsOpen(true)} 
+      />
+
+      <CookieBanner />
+
+      <LegalModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} title="Polityka Prywatności">
+        <h3 className="font-bold text-gray-900 mt-4">1. Informacje Ogólne</h3>
+        <p>Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych przekazanych przez Użytkowników w związku z korzystaniem z serwisu internetowego Ogniska Muzycznego "Barwy Muzyki" w Wasilkowie.</p>
+        <h3 className="font-bold text-gray-900 mt-4">2. Administrator Danych</h3>
+        <p>Administratorem Twoich danych osobowych jest Ognisko Muzyczne "Barwy Muzyki" z siedzibą przy ul. Antoniego Bućki 10, Wasilków.</p>
+        <h3 className="font-bold text-gray-900 mt-4">3. Cel Zbierania Danych</h3>
+        <p>Dane osobowe są przetwarzane wyłącznie w celu obsługi zapytania, przedstawienia oferty i zawarcia umowy.</p>
+        <h3 className="font-bold text-gray-900 mt-4">4. Prawa Użytkownika</h3>
+        <p>Masz prawo dostępu do danych, sprostowania, usunięcia. Skontaktuj się z nami: ogniskobarwymuzyki@gmail.com.</p>
+      </LegalModal>
+
+      <LegalModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} title="Regulamin Serwisu">
+        <h3 className="font-bold text-gray-900 mt-4">§ 1 Postanowienia wstępne</h3>
+        <p>1. Regulamin określa zasady korzystania z serwisu ogniska "Barwy Muzyki" w Wasilkowie.</p>
+        <h3 className="font-bold text-gray-900 mt-4">§ 2 Usługi elektroniczne</h3>
+        <p>W ramach Serwisu świadczona jest bezpłatna usługa formularza kontaktowego.</p>
+        <h3 className="font-bold text-gray-900 mt-4">§ 3 Kontakt</h3>
+        <p>Wszelkie reklamacje i zapytania można zgłaszać na adres e-mail: ogniskobarwymuzyki@gmail.com lub telefonicznie: 730 501 950.</p>
+      </LegalModal>
     </div>
   );
 }
