@@ -277,7 +277,8 @@ const Navbar = ({ isMenuOpen, setIsMenuOpen }) => (
             className="w-16 h-16 object-contain mix-blend-multiply mr-2"
             onError={(e) => { e.target.src = '/logo1.jpg' }} // Zabezpieczenie rozszerzenia pliku
           />
-          <span className="font-extrabold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500">
+          {/* Usunięto 'hidden sm:block', aby napis był widoczny również na telefonach */}
+          <span className="font-extrabold text-xl sm:text-2xl bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500">
             Barwy Muzyki
           </span>
         </div>
@@ -323,24 +324,6 @@ const Hero = () => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="text-center md:text-left">
-          
-          {/* Dodano klasy: hidden sm:flex - ukrywa sekcję na telefonach, pokazuje na tabletach/PC */}
-          <div className="hidden sm:flex flex-col sm:flex-row items-center md:items-start gap-4 mb-6">
-            {/* Logo 2 (z podpisem) - Powiększone w kółku */}
-            <div className="bg-white rounded-full shadow-xl border-4 border-white inline-flex items-center justify-center w-36 h-36 sm:w-44 sm:h-44 overflow-hidden relative flex-shrink-0">
-              <img 
-                src="/logo2.png" 
-                alt="Logo Ogniska" 
-                className="absolute w-[110%] h-[110%] max-w-none object-contain mix-blend-multiply"
-                onError={(e) => { e.target.src = '/logo2.jpg' }}
-              />
-            </div>
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white text-violet-600 font-semibold text-sm shadow-sm border border-violet-100 sm:mt-10">
-              <MapPin className="w-4 h-4 mr-2 text-fuchsia-500" />
-              Ognisko Muzyczne w Wasilkowie
-            </div>
-          </div>
-
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
             Rozbudź w dziecku <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500">pasję do muzyki!</span>
           </h1>
@@ -578,7 +561,7 @@ const Contact = ({ onOpenPrivacy }) => {
 
     try {
       // UWAGA: Zastąp ten URL swoim linkiem z Formspree
-      const response = await fetch("https://formspree.io/f/maqddlnd", {
+      const response = await fetch("TUTAJ_WKLEJ_SWOJ_LINK_Z_FORMSPREE", {
         method: "POST",
         body: data,
         headers: { 'Accept': 'application/json' }
