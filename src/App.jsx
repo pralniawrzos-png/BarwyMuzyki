@@ -287,7 +287,7 @@ const Contact = () => {
 
     try {
       // UWAGA: Zastąp ten URL swoim linkiem z Formspree
-      const response = await fetch("TUTAJ_WKLEJ_SWOJ_LINK_Z_FORMSPREE", {
+      const response = await fetch("https://formspree.io/f/maqddlnd", {
         method: "POST",
         body: data,
         headers: {
