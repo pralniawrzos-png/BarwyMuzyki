@@ -277,7 +277,7 @@ const Navbar = ({ isMenuOpen, setIsMenuOpen }) => (
             className="w-16 h-16 object-contain mix-blend-multiply mr-2"
             onError={(e) => { e.target.src = '/logo1.jpg' }} // Zabezpieczenie rozszerzenia pliku
           />
-          <span className="font-extrabold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500 hidden sm:block">
+          <span className="font-extrabold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-500">
             Barwy Muzyki
           </span>
         </div>
