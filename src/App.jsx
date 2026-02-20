@@ -324,7 +324,8 @@ const Hero = () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="text-center md:text-left">
           
-          <div className="flex flex-col sm:flex-row items-center md:items-start gap-4 mb-6">
+          {/* Dodano klasy: hidden sm:flex - ukrywa sekcję na telefonach, pokazuje na tabletach/PC */}
+          <div className="hidden sm:flex flex-col sm:flex-row items-center md:items-start gap-4 mb-6">
             {/* Logo 2 (z podpisem) - Powiększone w kółku */}
             <div className="bg-white rounded-full shadow-xl border-4 border-white inline-flex items-center justify-center w-36 h-36 sm:w-44 sm:h-44 overflow-hidden relative flex-shrink-0">
               <img 
@@ -577,7 +578,7 @@ const Contact = ({ onOpenPrivacy }) => {
 
     try {
       // UWAGA: Zastąp ten URL swoim linkiem z Formspree
-      const response = await fetch("Thttps://formspree.io/f/maqddlnd", {
+      const response = await fetch("https://formspree.io/f/maqddlnd", {
         method: "POST",
         body: data,
         headers: { 'Accept': 'application/json' }
