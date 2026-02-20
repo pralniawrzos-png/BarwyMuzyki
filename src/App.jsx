@@ -21,7 +21,7 @@ const Navbar = ({ isMenuOpen, setIsMenuOpen }) => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-20 items-center">
         {/* Logo */}
-        <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+        <div className="flex-shrink-0 flex items-center cursor-pointer">
           <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center mr-3 shadow-lg shadow-indigo-200">
             <Music className="h-6 w-6 text-white" />
           </div>
@@ -69,8 +69,8 @@ const Navbar = ({ isMenuOpen, setIsMenuOpen }) => (
 );
 
 const Hero = () => (
-  <div id="o-nas" className="relative bg-indigo-50 pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
-    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+  <div className="relative bg-indigo-50 pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
+    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
       <div className="absolute -top-24 -left-24 w-96 h-96 bg-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
       <div className="absolute top-48 -right-24 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
       <div className="absolute -bottom-24 left-48 w-96 h-96 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
@@ -138,7 +138,7 @@ const Offer = () => (
       <div className="grid md:grid-cols-2 gap-12">
         {/* Pianino */}
         <div className="bg-indigo-50 rounded-3xl p-8 md:p-10 border border-indigo-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
              <Music className="w-48 h-48 text-indigo-900" />
           </div>
           <div className="relative z-10">
@@ -162,7 +162,7 @@ const Offer = () => (
 
         {/* Ukulele */}
         <div className="bg-rose-50 rounded-3xl p-8 md:p-10 border border-rose-100 hover:shadow-xl transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
              <Guitar className="w-48 h-48 text-rose-900" />
           </div>
           <div className="relative z-10">
@@ -276,7 +276,7 @@ const Testimonials = () => (
 );
 
 const Contact = () => {
-  const [formStatus, setFormStatus] = useState('idle');
+  const [formStatus, setFormStatus] = useState('idle'); // 'idle', 'submitting', 'success', 'error'
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -286,7 +286,7 @@ const Contact = () => {
     const data = new FormData(form);
 
     try {
-      // UWAGA: Zastąp ten URL swoim linkiem z Formspree
+      // UWAGA: Zastąp poniższy URL swoim linkiem z Formspree (np. https://formspree.io/f/twoj_kod)
       const response = await fetch("https://formspree.io/f/maqddlnd", {
         method: "POST",
         body: data,
@@ -308,8 +308,8 @@ const Contact = () => {
 
   return (
     <section id="kontakt" className="py-20 bg-indigo-900 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-900 rounded-full mix-blend-multiply filter blur-3xl opacity-50 pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-900 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
